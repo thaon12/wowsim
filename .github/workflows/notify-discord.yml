@@ -1,0 +1,44 @@
+name: Notify Discord of New Release
+
+on:
+  schedule:
+    - cron: '0 * * * *' # Check every hour
+  workflow_dispatch: # Allows manual triggering of the workflow
+
+jobs:
+  notify:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v2
+
+    - name: Check for New Release
+      id: check_release
+      run: |
+        latest_release=$(curl -s https://api.github.com/repos/wowsims/cata/releases/latest)
+        latest_release_name=$(echo $latest_release | jq -r '.tag_name')
+        latest_release_url=$(echo $latest_release | jq -r '.html_url')
+        latest_release_body=$(echo $latest_release | jq -r '.body')
+        
+        echo "::set-output name=release_name::$latest_release_name"
+        echo "::set-output name=release_url::$latest_release_url"
+        echo "::set-output name=release_body::$latest_release_body"
+
+    - name: Send Discord Notification
+      if: steps.check_release.outputs.release_name != github.event.inputs.previous_release
+      env:
+        DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+      run: |
+        curl -H "Content-Type: application/json" -X POST -d \
+        '{"content": "New release published for wowsims/cata: **'"${{ steps.check_release.outputs.release_name }}"'**\n\nDetails: '"${{ steps.check_release.outputs.release_body }}"'\n\n[View Release]('"${{ steps.check_release.outputs.release_url }}"')"}' \
+        $DISCORD_WEBHOOK_URL
+
+    - name: Update Release Version
+      run: |
+        echo "previous_release=${{ steps.check_release.outputs.release_name }}" > .env
+        git config --global user.email "you@example.com"
+        git config --global user.name "Your Name"
+        git add .env
+        git commit -m "Update previous release version"
+        git push
