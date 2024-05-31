@@ -13,6 +13,23 @@ jobs:
     - name: Checkout
       uses: actions/checkout@v2
 
+    - name: Set up JQ
+      run: sudo apt-get install jq
+
+    - name: Initialize previous release
+      run: |
+        if [ ! -f .env ]; then
+          echo "previous_release=" > .env
+        fi
+      shell: bash
+
+    - name: Load previous release
+      id: load_prev_release
+      run: |
+        source .env
+        echo "::set-output name=previous_release::$previous_release"
+      shell: bash
+
     - name: Check for New Release
       id: check_release
       run: |
@@ -26,7 +43,7 @@ jobs:
         echo "::set-output name=release_body::$latest_release_body"
 
     - name: Send Discord Notification
-      if: steps.check_release.outputs.release_name != github.event.inputs.previous_release
+      if: steps.check_release.outputs.release_name != steps.load_prev_release.outputs.previous_release
       env:
         DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
       run: |
@@ -35,6 +52,7 @@ jobs:
         $DISCORD_WEBHOOK_URL
 
     - name: Update Release Version
+      if: steps.check_release.outputs.release_name != steps.load_prev_release.outputs.previous_release
       run: |
         echo "previous_release=${{ steps.check_release.outputs.release_name }}" > .env
         git config --global user.email "you@example.com"
