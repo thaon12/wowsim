@@ -31,7 +31,7 @@ jobs:
         DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
       run: |
         curl -H "Content-Type: application/json" -X POST -d \
-        '{"content": "New release published for wowsims/cata: **'"${{ steps.check_release.outputs.release_name }}"'**\n\nDetails: '"${{ steps.check_release.outputs.release_body }}"'\n\n[View Release]('"${{ steps.check_release.outputs.release_url }}"')"}' \
+        '{"content": "New release published for wowsims/cata: **'"${{ steps.check_release.outputs.release_name }}"'**\n\nDetails: '"${{ steps.check_release.outputs.release_body }}"'\n\n[View Release](<'"${{ steps.check_release.outputs.release_url }}"'>)"}' \
         $DISCORD_WEBHOOK_URL
 
     - name: Update Release Version
