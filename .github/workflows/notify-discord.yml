@@ -16,20 +16,24 @@ jobs:
     - name: Set up JQ
       run: sudo apt-get install jq
 
+    - name: Restore Cache
+      id: cache
+      uses: actions/cache@v2
+      with:
+        path: previous_release
+        key: previous-release-cache
+
     - name: Initialize previous release
-      run: |
-        if [ ! -f .env ]; then
-          echo "previous_release=" > .env
-        fi
-      shell: bash
+      run: echo "previous_release=" > previous_release
 
     - name: Load previous release
       id: load_prev_release
       run: |
-        source .env
+        if [ -f previous_release ]; then
+          source previous_release
+        fi
         echo "Previous release: $previous_release"
         echo "::set-output name=previous_release::$previous_release"
-      shell: bash
 
     - name: Check for New Release
       id: check_release
@@ -44,6 +48,11 @@ jobs:
         echo "::set-output name=release_url::$latest_release_url"
         echo "::set-output name=release_body::$latest_release_body"
 
+    - name: Debug Outputs
+      run: |
+        echo "Previous release: ${{ steps.load_prev_release.outputs.previous_release }}"
+        echo "Current release: ${{ steps.check_release.outputs.release_name }}"
+
     - name: Send Discord Notification
       if: steps.check_release.outputs.release_name != steps.load_prev_release.outputs.previous_release
       env:
@@ -56,9 +65,13 @@ jobs:
     - name: Update Release Version
       if: steps.check_release.outputs.release_name != steps.load_prev_release.outputs.previous_release
       run: |
-        echo "previous_release=${{ steps.check_release.outputs.release_name }}" > .env
-        git config --global user.email "you@example.com"
-        git config --global user.name "Your Name"
-        git add .env
-        git commit -m "Update previous release version"
-        git push
+        echo "previous_release=${{ steps.check_release.outputs.release_name }}" > previous_release
+
+    - name: Cache new release version
+      if: steps.check_release.outputs.release_name != steps.load_prev_release.outputs.previous_release
+      uses: actions/cache@v2
+      with:
+        path: previous_release
+        key: previous-release-cache
+        restore-keys: |
+          previous-release-cache
