@@ -16,21 +16,19 @@ jobs:
     - name: Set up JQ
       run: sudo apt-get install jq
 
-    - name: Restore Cache
-      id: cache
-      uses: actions/cache@v2
-      with:
-        path: previous_release
-        key: previous-release-cache
-
     - name: Initialize previous release
-      run: echo "previous_release=" > previous_release
+      run: |
+        if [ ! -f previous_release ]; then
+          echo "previous_release=" > previous_release
+        fi
 
     - name: Load previous release
       id: load_prev_release
       run: |
         if [ -f previous_release ]; then
           source previous_release
+        else
+          echo "previous_release="
         fi
         echo "Previous release: $previous_release"
         echo "::set-output name=previous_release::$previous_release"
@@ -66,12 +64,8 @@ jobs:
       if: steps.check_release.outputs.release_name != steps.load_prev_release.outputs.previous_release
       run: |
         echo "previous_release=${{ steps.check_release.outputs.release_name }}" > previous_release
-
-    - name: Cache new release version
-      if: steps.check_release.outputs.release_name != steps.load_prev_release.outputs.previous_release
-      uses: actions/cache@v2
-      with:
-        path: previous_release
-        key: previous-release-cache
-        restore-keys: |
-          previous-release-cache
+        git config --global user.email "you@example.com"
+        git config --global user.name "GitHub Actions"
+        git add previous_release
+        git commit -m "Update previous release version"
+        git push
