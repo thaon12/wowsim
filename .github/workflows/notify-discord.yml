@@ -38,9 +38,15 @@ jobs:
         latest_release_url=$(echo $latest_release | jq -r '.html_url')
         latest_release_body=$(echo $latest_release | jq -r '.body')
         
+        echo "Latest release: $latest_release_name"
         echo "::set-output name=release_name::$latest_release_name"
         echo "::set-output name=release_url::$latest_release_url"
         echo "::set-output name=release_body::$latest_release_body"
+
+    - name: Debug Outputs
+      run: |
+        echo "Previous release: ${{ steps.load_prev_release.outputs.previous_release }}"
+        echo "Current release: ${{ steps.check_release.outputs.release_name }}"
 
     - name: Send Discord Notification
       if: steps.check_release.outputs.release_name != steps.load_prev_release.outputs.previous_release
