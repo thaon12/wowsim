@@ -27,10 +27,8 @@ jobs:
       run: |
         if [ -f previous_release ]; then
           source previous_release
-        else
-          echo "previous_release="
         fi
-        echo "Previous release: $previous_release" >> $GITHUB_ENV
+        echo "PREVIOUS_RELEASE=${previous_release}" >> $GITHUB_ENV
 
     - name: Check for New Release
       id: check_release
@@ -40,29 +38,28 @@ jobs:
         latest_release_url=$(echo $latest_release | jq -r '.html_url')
         latest_release_body=$(echo $latest_release | jq -r '.body')
         
-        echo "Latest release: $latest_release_name" >> $GITHUB_ENV
-        echo "release_name=$latest_release_name" >> $GITHUB_ENV
-        echo "release_url=$latest_release_url" >> $GITHUB_ENV
-        echo "release_body=$latest_release_body" >> $GITHUB_ENV
+        echo "LATEST_RELEASE_NAME=${latest_release_name}" >> $GITHUB_ENV
+        echo "LATEST_RELEASE_URL=${latest_release_url}" >> $GITHUB_ENV
+        echo "LATEST_RELEASE_BODY=${latest_release_body}" >> $GITHUB_ENV
 
     - name: Debug Outputs
       run: |
-        echo "Previous release: ${{ env.previous_release }}"
-        echo "Current release: ${{ env.release_name }}"
+        echo "Previous release: ${{ env.PREVIOUS_RELEASE }}"
+        echo "Current release: ${{ env.LATEST_RELEASE_NAME }}"
 
     - name: Send Discord Notification
-      if: env.release_name != env.previous_release
+      if: env.LATEST_RELEASE_NAME != env.PREVIOUS_RELEASE
       env:
         DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
       run: |
         curl -H "Content-Type: application/json" -X POST -d \
-        '{"content": "New release published for wowsims/cata: **'"${{ env.release_name }}"'**\n\nDetails: '"${{ env.release_body }}"'\n\n[View Release](<'"${{ env.release_url }}"'>)"}' \
+        '{"content": "New release published for wowsims/cata: **'"${{ env.LATEST_RELEASE_NAME }}"'**\n\nDetails: '"${{ env.LATEST_RELEASE_BODY }}"'\n\n[View Release](<'"${{ env.LATEST_RELEASE_URL }}"'>)"}' \
         $DISCORD_WEBHOOK_URL
 
     - name: Update Release Version
-      if: env.release_name != env.previous_release
+      if: env.LATEST_RELEASE_NAME != env.PREVIOUS_RELEASE
       run: |
-        echo "previous_release=${{ env.release_name }}" > previous_release
+        echo "previous_release=${{ env.LATEST_RELEASE_NAME }}" > previous_release
         git config --global user.email "you@example.com"
         git config --global user.name "GitHub Actions"
         git add previous_release
