@@ -36,8 +36,8 @@ jobs:
         latest_release=$(curl -s https://api.github.com/repos/wowsims/cata/releases/latest)
         latest_release_name=$(echo $latest_release | jq -r '.tag_name')
         latest_release_url=$(echo $latest_release | jq -r '.html_url')
-        latest_release_body=$(echo $latest_release | jq -r '.body')
-        
+        latest_release_body=$(echo $latest_release | jq -r '.body' | jq -R -s '.' | jq -r)
+
         echo "LATEST_RELEASE_NAME=${latest_release_name}" >> $GITHUB_ENV
         echo "LATEST_RELEASE_URL=${latest_release_url}" >> $GITHUB_ENV
         echo "LATEST_RELEASE_BODY=${latest_release_body}" >> $GITHUB_ENV
