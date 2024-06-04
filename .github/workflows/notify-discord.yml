@@ -11,7 +11,7 @@ jobs:
 
     steps:
     - name: Checkout
-      uses: actions/checkout@v2
+      uses: actions/checkout@v3
 
     - name: Set up JQ
       run: sudo apt-get install jq
@@ -30,8 +30,7 @@ jobs:
         else
           echo "previous_release="
         fi
-        echo "Previous release: $previous_release"
-        echo "::set-output name=previous_release::$previous_release"
+        echo "Previous release: $previous_release" >> $GITHUB_ENV
 
     - name: Check for New Release
       id: check_release
@@ -41,31 +40,33 @@ jobs:
         latest_release_url=$(echo $latest_release | jq -r '.html_url')
         latest_release_body=$(echo $latest_release | jq -r '.body')
         
-        echo "Latest release: $latest_release_name"
-        echo "::set-output name=release_name::$latest_release_name"
-        echo "::set-output name=release_url::$latest_release_url"
-        echo "::set-output name=release_body::$latest_release_body"
+        echo "Latest release: $latest_release_name" >> $GITHUB_ENV
+        echo "release_name=$latest_release_name" >> $GITHUB_ENV
+        echo "release_url=$latest_release_url" >> $GITHUB_ENV
+        echo "release_body=$latest_release_body" >> $GITHUB_ENV
 
     - name: Debug Outputs
       run: |
-        echo "Previous release: ${{ steps.load_prev_release.outputs.previous_release }}"
-        echo "Current release: ${{ steps.check_release.outputs.release_name }}"
+        echo "Previous release: ${{ env.previous_release }}"
+        echo "Current release: ${{ env.release_name }}"
 
     - name: Send Discord Notification
-      if: steps.check_release.outputs.release_name != steps.load_prev_release.outputs.previous_release
+      if: env.release_name != env.previous_release
       env:
         DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
       run: |
         curl -H "Content-Type: application/json" -X POST -d \
-        '{"content": "New release published for wowsims/cata: **'"${{ steps.check_release.outputs.release_name }}"'**\n\nDetails: '"${{ steps.check_release.outputs.release_body }}"'\n\n[View Release](<'"${{ steps.check_release.outputs.release_url }}"'>)"}' \
+        '{"content": "New release published for wowsims/cata: **'"${{ env.release_name }}"'**\n\nDetails: '"${{ env.release_body }}"'\n\n[View Release](<'"${{ env.release_url }}"'>)"}' \
         $DISCORD_WEBHOOK_URL
 
     - name: Update Release Version
-      if: steps.check_release.outputs.release_name != steps.load_prev_release.outputs.previous_release
+      if: env.release_name != env.previous_release
       run: |
-        echo "previous_release=${{ steps.check_release.outputs.release_name }}" > previous_release
+        echo "previous_release=${{ env.release_name }}" > previous_release
         git config --global user.email "you@example.com"
         git config --global user.name "GitHub Actions"
         git add previous_release
         git commit -m "Update previous release version"
         git push
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
